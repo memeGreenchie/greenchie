@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Telegram MiniApp</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background: #f4f4f4;
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+        }
+        .header {
+            background-color: #0088cc;
+            color: white;
+            text-align: center;
+            padding: 10px;
+            font-size: 24px;
+            font-weight: bold;
+        }
+        .container {
+            flex: 1;
+            overflow: auto;
+        }
+        .iframe-container {
+            width: 100%;
+            height: calc(100vh - 140px);
+            background: #000;
+        }
+        iframe {
+            width: 100%;
+            height: 100%;
+            border: none;
+        }
+        .mission-list {
+            padding: 20px;
+        }
+        .mission-item {
+            background: #fff;
+            border: 1px solid #ddd;
+            padding: 15px;
+            margin-bottom: 10px;
+            border-radius: 5px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+        .mission-item button {
+            margin-top: 10px;
+            padding: 10px 20px;
+            background-color: #0088cc;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        .mission-item button:hover {
+            background-color: #005f99;
+        }
+        .ranking-list {
+            padding: 20px;
+        }
+        .ranking-item {
+            background: #fff;
+            border: 1px solid #ddd;
+            padding: 10px;
+            margin-bottom: 10px;
+            border-radius: 5px;
+        }
+        .bottom-nav {
+            display: flex;
+            justify-content: space-around;
+            background-color: #0088cc;
+            padding: 10px 0;
+            position: fixed;
+            bottom: 0;
+            width: 100%;
+        }
+        .bottom-nav button {
+            background: none;
+            border: none;
+            color: white;
+            font-size: 16px;
+            cursor: pointer;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        .bottom-nav button.active {
+            font-weight: bold;
+        }
+        .section {
+            display: none;
+        }
+        .section.active {
+            display: block;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">Telegram MiniApp</div>
+
+    <div class="container">
+        <!-- Home Section -->
+        <div id="home-section" class="section active">
+            <div class="iframe-container">
+                <iframe src="your-game-url-here.html"></iframe>
+            </div>
+        </div>
+
+        <!-- Mission Section -->
+        <div id="mission-section" class="section">
+            <div class="mission-list">
+                <div class="mission-item">
+                    <p>Follow us on Twitter to earn a ticket.</p>
+                    <button>Complete Mission</button>
+                </div>
+                <div class="mission-item">
+                    <p>Join our Telegram group to earn a ticket.</p>
+                    <button>Complete Mission</button>
+                </div>
+                <div class="mission-item">
+                    <p>Invite a friend to the game to earn 2 tickets.</p>
+                    <button>Complete Mission</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Ranking Section -->
+        <div id="ranking-section" class="section">
+            <div class="ranking-list">
+                <!-- Rankings will be dynamically loaded here -->
+            </div>
+        </div>
+
+        <!-- Wallet Section -->
+        <div id="wallet-section" class="section">
+            <div style="padding: 20px;">
+                <h2>Connect Wallet</h2>
+                <button id="connect-wallet" style="padding: 10px 20px; background-color: #0088cc; color: white; border: none; border-radius: 5px; cursor: pointer;">Connect</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="bottom-nav">
+        <button id="nav-home" class="active">🏠<span>Home</span></button>
+        <button id="nav-mission">📜<span>Mission</span></button>
+        <button id="nav-ranking">⭐<span>Ranking</span></button>
+        <button id="nav-wallet">💰<span>Wallet</span></button>
+    </div>
+
+    <script>
+        const sections = {
+            home: document.getElementById('home-section'),
+            mission: document.getElementById('mission-section'),
+            ranking: document.getElementById('ranking-section'),
+            wallet: document.getElementById('wallet-section')
+        };
+
+        const navButtons = document.querySelectorAll('.bottom-nav button');
+
+        navButtons.forEach(button => {
+            button.addEventListener('click', () => {
+                const target = button.id.split('-')[1];
+
+                // Show the selected section
+                Object.values(sections).forEach(sec => sec.classList.remove('active'));
+                sections[target].classList.add('active');
+
+                // Highlight the active button
+                navButtons.forEach(btn => btn.classList.remove('active'));
+                button.classList.add('active');
+            });
+        });
+
+        async function connectWallet() {
+            if (window.ethereum) {
+                try {
+                    const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
+                    const userAddress = accounts[0];
+                    console.log('Wallet connected:', userAddress);
+                    // Send wallet address to the server
+                    await fetch('/api/connect', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ address: userAddress }),
+                    });
+                    alert('Wallet connected successfully!');
+                } catch (error) {
+                    console.error('Wallet connection failed:', error);
+                }
+            } else {
+                alert('MetaMask not found!');
+            }
+        }
+
+        document.getElementById('connect-wallet').addEventListener('click', connectWallet);
+
+        async function loadRankings() {
+            try {
+                const response = await fetch('/api/rankings');
+                const rankings = await response.json();
+
+                const rankingList = document.querySelector('.ranking-list');
+                rankingList.innerHTML = '';
+
+                rankings.forEach((item, index) => {
+                    const listItem = document.createElement('div');
+                    listItem.className = 'ranking-item';
+                    listItem.textContent = `${index + 1}. ${item.username} - ${item.score} points`;
+                    rankingList.appendChild(listItem);
+                });
+            } catch (error) {
+                console.error('Error loading rankings:', error);
+            }
+        }
+
+        document.getElementById('nav-ranking').addEventListener('click', loadRankings);
+    </script>
+</body>
+</html>
